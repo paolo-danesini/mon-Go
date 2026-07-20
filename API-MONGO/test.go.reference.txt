@@ -1,0 +1,127 @@
+package main
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"log"
+	"net/http"
+	"os"
+	"reflect"
+	"strings"
+	"time"
+
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/bsoncodec"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+)
+
+// Environment variable
+var client *mongo.Client
+var database string
+var collectionMongo string
+var methodName string
+var port string
+
+func main() {
+	// Configura il client MongoDB
+	//mongo_addr := "mongodb://localhost:27017/"
+	mongo_addr := os.Getenv("MONGO_CNN")
+	//"mongodb://tprevvitadb01azne:VXnfansnyd1pHHm4wF6NImjYQoUYiTPezIgAAAdcbWyFGnHu7a6Szh7NcoPOkjLra2unjSYZoQ7OYdytcZd2oQ%3D%3D@tprevvitadb01azne.mongo.cosmos.azure.com:10255/?authSource=admin&replicaSet=globaldb&maxIdleTimeMS=120000&readPreference=primary&appname=%40tprevvitadb01azne%40&retryWrites=false&ssl=true"
+	port = os.Getenv("PORT")
+	//
+	fmt.Println(mongo_addr)
+	fmt.Println(database)
+	fmt.Println(collectionMongo)
+	fmt.Println(methodName)
+	//
+	structcodec, _ := bsoncodec.NewStructCodec(bsoncodec.JSONFallbackStructTagParser)
+	rb := bson.NewRegistryBuilder()
+	// register struct codec
+	rb.RegisterDefaultEncoder(reflect.Struct, structcodec)
+	rb.RegisterDefaultDecoder(reflect.Struct, structcodec)
+	clientOptions := options.Client().SetRegistry(rb.Build()).ApplyURI(mongo_addr)
+
+	var err error
+	client, err = mongo.Connect(context.Background(), clientOptions)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer client.Disconnect(context.Background())
+
+	// Inizializza il router HTTP
+	//http.HandleFunc("/prodotto/", GetKey)
+	http.HandleFunc("/getFromMongo/", GetKey)
+
+	// Avvia il server
+	fmt.Println("Server in ascolto sulla porta " + port + "...")
+	http.ListenAndServe(":"+port, nil)
+}
+
+func GetKey(w http.ResponseWriter, r *http.Request) {
+
+	// Recupero dal path --> Nome collection e chiave con valore da ricercare
+	// Attualmente questa modalità funziona solo per recupero chiave secca non restituiisce array di valori
+	id := strings.TrimPrefix(r.URL.Path, "/getFromMongo/")
+
+	// eseguo lo split per "/" per estrarre dal path nome db nome collection e chiavi da ricercare
+	_arrayCommand := strings.Split(id, "/")
+
+	database = _arrayCommand[0]
+	collectionMongo = _arrayCommand[1]
+
+	_keyToSearch := strings.Split(_arrayCommand[2], "=")
+	_key := _keyToSearch[0]
+	_valueToSearch := _keyToSearch[1]
+
+	collection := client.Database(database).Collection(collectionMongo)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	cur, err := collection.Find(ctx, bson.M{_key: _valueToSearch})
+
+	if err != nil {
+		handleError(w, err)
+		return
+	}
+	defer cur.Close(ctx)
+
+	var result bson.M
+	var user []byte
+	//var user ProdottoCompleto
+	cur.Next(ctx)
+	errP := cur.Decode(&result)
+	if errP != nil {
+		handleError(w, errP)
+		return
+	}
+
+	//for cur.Next(ctx) {
+	//	var user ProdottoCompleto
+	//	err := cur.Decode(&user)
+	//	if err != nil {
+	//		handleError(w, err)
+	//		return
+	//	}
+	//	users = append(users, user)
+	//}
+
+	w.Header().Set("Content-Type", "application/json")
+	//json.NewEncoder(w).Encode(users)
+	user, errP = json.Marshal(result)
+	if errP != nil {
+		handleError(w, errP)
+		return
+	}
+
+	var prodotto = string(user)
+	fmt.Fprintf(w, prodotto)
+	//json.NewEncoder(w).Encode(prodotto)
+}
+
+func handleError(w http.ResponseWriter, err error) {
+	w.WriteHeader(http.StatusInternalServerError)
+	fmt.Fprintf(w, "Errore: %v", err)
+}

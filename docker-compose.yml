@@ -1,0 +1,11 @@
+services:
+  api:
+    image: rest-api:local
+    container_name: rest-api
+    ports:
+      - "8080:8080"
+    environment:
+      PORT: "8080"
+      # Connessione al servizio "mongo" definito sotto (nome risolto dalla rete Docker interna).
+      MONGO_CNN: "mongodb://tprevvitadb01azne:VXnfansnyd1pHHm4wF6NImjYQoUYiTPezIgAAAdcbWyFGnHu7a6Szh7NcoPOkjLra2unjSYZoQ7OYdytcZd2oQ%3D%3D@tprevvitadb01azne.mongo.cosmos.azure.com:10255/?authSource=admin&maxIdleTimeMS=120000&readPreference=primary&appname=%40tprevvitadb01azne%40&retryWrites=false&ssl=true&directConnection=true"
+    restart: unless-stopped

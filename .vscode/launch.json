@@ -1,0 +1,40 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug API (con Mongo Offloading)",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}",
+            "env": {
+                // Porta 5000 evitata: su Windows con GPU Intel è spesso occupata
+                // dal servizio "OneApp.IGCC.WinService" (Intel Graphics Command Center).
+                "PORT": "8090",
+                "MONGO_CNN": "mongodb://openshift_rw:Ub_z06Vx6Car@toffpvdb01v.rete.testposte:27019,toffpvdb02v.rete.testposte:27019,toffpvdb03v.rete.testposte:27019/postevita?authSource=postevita&authMechanism=SCRAM-SHA-256&replicaSet=offloadingPVColl&maxIdleTimeMS=120000&readPreference=nearest&retryWrites=false&ssl=false"
+            },
+            "args": []
+        },
+        {
+            "name": "Debug API (con Mongo Cosmos Azure)",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}",
+            "env": {
+                // Porta 5000 evitata: su Windows con GPU Intel è spesso occupata
+                // dal servizio "OneApp.IGCC.WinService" (Intel Graphics Command Center).
+                "PORT": "8090",
+                // "replicaSet=globaldb" rimosso e "directConnection=true" aggiunto:
+                // il driver Go (a differenza di MongoDB Compass) segue rigorosamente la
+                // discovery SDAM del replica set, tentando di raggiungere anche gli altri
+                // membri segnalati da Cosmos DB. Se questi non sono raggiungibili dalla
+                // rete corrente (es. dietro VPN/proxy aziendale), ogni query va in timeout
+                // anche se la connessione iniziale riesce. directConnection=true bypassa
+                // la discovery e parla solo con l'host indicato nella connection string.
+                "MONGO_CNN": "mongodb://tprevvitadb01azne:VXnfansnyd1pHHm4wF6NImjYQoUYiTPezIgAAAdcbWyFGnHu7a6Szh7NcoPOkjLra2unjSYZoQ7OYdytcZd2oQ%3D%3D@tprevvitadb01azne.mongo.cosmos.azure.com:10255/?authSource=admin&maxIdleTimeMS=120000&readPreference=primary&appname=%40tprevvitadb01azne%40&retryWrites=false&ssl=true&directConnection=true"
+            },
+            "args": []
+        }
+    ]
+}
