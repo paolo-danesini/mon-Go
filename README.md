@@ -1,7 +1,6 @@
 # REST API Go
 
 API REST minimale in Go (standard library `net/http` + driver ufficiale MongoDB) per gestire:
-- una risorsa `Task` in memoria (CRUD completo);
 - query generiche su MongoDB tramite path `/mongo/{database}/{collection}/{key}={value}`.
 
 ## Requisiti
